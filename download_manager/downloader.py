@@ -40,7 +40,7 @@ class Downloader:
         )
 
         supports_ranges = (
-            headers.get("Accept-Ranges", "none").lower() == "bytes"
+            headers.get("Accept-Ranges", "").lower() == "bytes"
         )
 
         filename = self.output_path.name
