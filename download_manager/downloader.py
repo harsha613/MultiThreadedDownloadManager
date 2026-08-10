@@ -2,6 +2,7 @@ from pathlib import Path
 import requests
 
 from download_manager.utils import FileInfo
+from download_manager.progress import ProgressTracker
 
 class Downloader:
 
@@ -12,6 +13,12 @@ class Downloader:
         self.output_path = output_path
 
     def download(self) -> None:
+        """
+        Download the file to the specified output path
+        """
+        file_info = self.get_file_info()
+
+        tracker = ProgressTracker(file_info.file_size)
 
         response = requests.get(self.url, stream=True)
 
@@ -21,7 +28,9 @@ class Downloader:
             for chunk in response.iter_content(chunk_size=self.CHUNK_SIZE):
                 if chunk:
                     f.write(chunk)
+                    tracker.update(len(chunk))
 
+        tracker.finish()
         print(f"Downloaded completed: {self.output_path}")
 
     def get_file_info(self) -> FileInfo:
@@ -30,6 +39,7 @@ class Downloader:
         """
         response = requests.head(self.url, allow_redirects=True)
         response.raise_for_status()
+
         headers = response.headers
 
         file_size = int(headers.get("Content-Length", 0))
