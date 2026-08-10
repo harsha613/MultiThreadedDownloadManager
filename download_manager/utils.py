@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-@dataclass
+@dataclass #used instead of taking arguments and assigning them manually like self.x = x
 class FileInfo:
     """Class for keeping track of a file's information."""
     filename: str
