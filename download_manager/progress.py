@@ -1,4 +1,5 @@
 import time
+import threading
 
 class ProgressTracker:
     "Tracks and displays the progress of a download."
@@ -8,9 +9,20 @@ class ProgressTracker:
         self.downloaded = 0
         self.start_time = time.time()
 
+        self.last_display_time = 0
+        self.last_downloaded = 0
+        self.last_speed_time = time.time()
+
+        self.lock = threading.Lock()
+
     def update(self, bytes_downloaded: int) -> None:
-        self.downloaded += bytes_downloaded
-        self._display()
+        with self.lock:
+            self.downloaded += bytes_downloaded
+
+            current_time = time.time()
+            if current_time - self.last_display_time >= 1:  # Update every second
+                self.last_display_time = current_time
+                self._display()
 
     def _format_speed(self, bytes_per_second: float) -> str:
         """Convert bytes per second to a human-readable format."""
@@ -23,12 +35,19 @@ class ProgressTracker:
         return f"{bytes_per_second / (1024 ** 2):.2f} MB/s"
 
     def _display(self) -> None:
-        elapsed = time.time() - self.start_time
+
+        current_time = time.time()
+
+        elapsed = current_time - self.last_speed_time
+        bytes_downloaded = self.downloaded - self.last_downloaded
 
         if elapsed > 0:
-            speed = self.downloaded / elapsed
+            speed = bytes_downloaded / elapsed
         else:
             speed = 0
+
+        self.last_speed_time = current_time
+        self.last_downloaded = self.downloaded
 
         if self.total_size > 0:
             percentage = (self.downloaded / self.total_size) * 100
@@ -38,7 +57,7 @@ class ProgressTracker:
         speed_text = self._format_speed(speed)
 
         print(
-            f"\rDownloaded: "
+            f"\033[2K\rDownloaded: "
             f"{self.downloaded:,} / {self.total_size:,} bytes "
             f"({percentage:.2f}%) "
             f"| Speed: {speed_text}",
@@ -47,4 +66,6 @@ class ProgressTracker:
         )
 
     def finish(self) -> None:
-        print()
+        with self.lock:
+            self._display()
+            print()  # Move to the next line after finishing
