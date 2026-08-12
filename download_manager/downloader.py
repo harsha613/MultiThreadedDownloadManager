@@ -29,6 +29,8 @@ class Downloader:
         """
         file_info = self.get_file_info()
 
+        tracker = ProgressTracker(file_info.file_size)
+
         print(f"File: {file_info.filename}")
         print(f"Size: {file_info.file_size} bytes")
 
@@ -58,11 +60,21 @@ class Downloader:
                     self.url,
                     chunk,
                     str(chunk_path),
+                    tracker.update,
                 )
                 futures.append(future)
 
             for future in futures:
-                future.result()  # Even if one of the downloads fails, this will raise an exception
+                try:
+                    future.result()  # wait for the download or throw an exception if it failed
+                except Exception as e:
+                    print(f"Error downloading chunk: {e}")
+
+                    for f in futures:
+                        f.cancel()  # Cancel all other futures if one fails
+                    return  # Exit if any chunk fails to download
+
+        tracker.finish()
 
         merge_chunks(chunk_paths, self.output_path,)
         print(f"Download completed and merged into {self.output_path}")
