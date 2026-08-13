@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import requests
 import time
 
@@ -10,6 +12,7 @@ def download_chunk(
         chunk: Chunk,
         output_path: str,
         progress_callback=None,
+        stop_event=None,
         ) -> None:
     """
     Download a specific chunk of a file from the given URL.
@@ -25,10 +28,21 @@ def download_chunk(
     """
     expected_size = chunk.end - chunk.start + 1
 
+    if Path(output_path).exists():
+        existing_size = Path(output_path).stat().st_size
+        if existing_size == expected_size:
+            return
+    else:
+        existing_size = 0
+
     for attempt in range(MAX_RETRIES):
+        if stop_event and stop_event.is_set():
+            return  # Exit if the stop event is set
+
         try:
+            resume_from = chunk.start + existing_size
             headers = {
-                "Range": f"bytes={chunk.start}-{chunk.end}"
+                "Range": f"bytes={resume_from}-{chunk.end}"
             }
 
             response = requests.get(
@@ -45,8 +59,11 @@ def download_chunk(
                 )
 
             downloaded_size = 0
-            with open(output_path, "wb") as file:
+            with open(output_path, "ab") as file:
                 for data in response.iter_content(chunk_size=8192):
+                    if stop_event and stop_event.is_set():
+                        return  # Exit if the stop event is set
+
                     if data:
                         file.write(data)
                         downloaded_size += len(data)
@@ -54,7 +71,7 @@ def download_chunk(
                         if progress_callback:
                             progress_callback(len(data))  # Update progress with the number of bytes downloaded
 
-            if downloaded_size != expected_size:
+            if existing_size + downloaded_size != expected_size:
                 raise requests.RequestException(
                     f"Downloaded size {downloaded_size} does not match expected size {expected_size}"
                 )
@@ -62,9 +79,11 @@ def download_chunk(
             return  # Exit the function if download is successful
 
         except requests.RequestException as e:
-            print(f"Attempt {attempt + 1} failed for chunk {chunk.index}: {e}")
+            print(f"\nAttempt {attempt + 1} failed for chunk {chunk.index}: {e}")
 
             if attempt == MAX_RETRIES - 1:
+                if stop_event:
+                    stop_event.set()  # Signal to stop other threads if this is the last attempt
                 raise  # Re-raise the exception if it's the last attempt
 
             time.sleep(1)  # Wait for a second before retrying
