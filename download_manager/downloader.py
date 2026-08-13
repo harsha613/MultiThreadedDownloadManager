@@ -1,6 +1,7 @@
 from pathlib import Path
-import requests
 from concurrent.futures import ThreadPoolExecutor
+import requests
+import threading
 
 from download_manager.utils import FileInfo
 from download_manager.progress import ProgressTracker
@@ -30,6 +31,8 @@ class Downloader:
         file_info = self.get_file_info()
 
         tracker = ProgressTracker(file_info.file_size)
+
+        stop_event = threading.Event()
 
         print(f"File: {file_info.filename}")
         print(f"Size: {file_info.file_size} bytes")
@@ -61,6 +64,7 @@ class Downloader:
                     chunk,
                     str(chunk_path),
                     tracker.update,
+                    stop_event,
                 )
                 futures.append(future)
 
@@ -72,6 +76,10 @@ class Downloader:
 
                     for f in futures:
                         f.cancel()  # Cancel all other futures if one fails
+
+                    for chunk_path in chunk_paths:
+                        if Path(chunk_path).exists():
+                            Path(chunk_path).unlink()  # Clean up any partially downloaded chunks
                     return  # Exit if any chunk fails to download
 
         tracker.finish()
