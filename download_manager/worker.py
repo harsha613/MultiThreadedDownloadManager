@@ -28,18 +28,24 @@ def download_chunk(
     """
     expected_size = chunk.end - chunk.start + 1
 
-    if Path(output_path).exists():
-        existing_size = Path(output_path).stat().st_size
-        if existing_size == expected_size:
-            return
-    else:
-        existing_size = 0
-
     for attempt in range(MAX_RETRIES):
         if stop_event and stop_event.is_set():
             return  # Exit if the stop event is set
 
         try:
+            if Path(output_path).exists():
+                existing_size = Path(output_path).stat().st_size
+            else:
+                existing_size = 0
+
+            if existing_size == expected_size:
+                return
+
+            if existing_size > expected_size:
+                raise requests.RequestException(
+                    f"Existing chunk size {existing_size} exceeds expected size {expected_size}"
+                )
+
             resume_from = chunk.start + existing_size
             headers = {
                 "Range": f"bytes={resume_from}-{chunk.end}"
