@@ -16,6 +16,15 @@ class Chunk:
 def create_chunks(file_size: int, number_of_chunks: int) -> list[Chunk]:
     """Divide the file into chunks based on the specified number of chunks."""
 
+    if file_size <= 0:
+        raise ValueError("File size must be a positive integer.")
+
+    if number_of_chunks <= 0:
+        raise ValueError("Number of chunks must be a positive integer.")
+
+    if number_of_chunks > file_size:
+        raise ValueError("Number of chunks cannot exceed the file size.")
+
     chunks = []
     chunk_size = file_size // number_of_chunks
 
