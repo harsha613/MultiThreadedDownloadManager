@@ -35,11 +35,17 @@ def download_chunk(
         try:
             if Path(output_path).exists():
                 existing_size = Path(output_path).stat().st_size
+
+                if existing_size > expected_size:
+                    raise ValueError(
+                        f"Existing chunk size {existing_size} exceeds "
+                        f"expected size {expected_size}"
+                    )
+
+                if existing_size == expected_size:
+                    return
             else:
                 existing_size = 0
-
-            if existing_size == expected_size:
-                return
 
             if existing_size > expected_size:
                 raise requests.RequestException(
