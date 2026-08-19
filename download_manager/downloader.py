@@ -30,6 +30,10 @@ class Downloader:
         """
         file_info = self.get_file_info()
 
+        if not file_info.supports_ranges:
+            self.download_single()
+            return
+
         tracker = ProgressTracker(file_info.file_size)
 
         stop_event = threading.Event()
@@ -87,6 +91,18 @@ class Downloader:
         merge_chunks(chunk_paths, self.output_path,)
         print(f"Download completed and merged into {self.output_path}")
 
+    def download_single(self) -> None:
+        """Download the entire file using single HTTP request."""
+
+        response = requests.get(self.url, stream=True)
+        response.raise_for_status()
+
+        with self.output_path.open("wb") as output_file:
+            for data in response.iter_content(chunk_size=8192):
+                if data:
+                    output_file.write(data)
+        print(f"Download completed: {self.output_path}")
+
     def get_file_info(self) -> FileInfo:
         """
         Retrieve file metadata without downloading the entire file.
@@ -96,7 +112,12 @@ class Downloader:
 
         headers = response.headers
 
-        file_size = int(headers.get("Content-Length", 0))
+        content_length = headers.get("Content-Length")
+
+        if content_length is None:
+            raise ValueError("Server did not provide Content-Length")
+
+        file_size = int(content_length)
 
         content_type = headers.get(
             "Content-Type",
