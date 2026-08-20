@@ -2,12 +2,11 @@ import time
 import threading
 
 class ProgressTracker:
-    "Tracks and displays the progress of a download."
+    """Tracks and displays the progress of a download."""
 
     def __init__(self, total_size: int):
         self.total_size = total_size
         self.downloaded = 0
-        self.start_time = time.time()
 
         self.last_display_time = 0
         self.last_downloaded = 0
@@ -26,7 +25,7 @@ class ProgressTracker:
 
     def _format_speed(self, bytes_per_second: float) -> str:
         """Convert bytes per second to a human-readable format."""
-        if bytes_per_second < 1024 :
+        if bytes_per_second < 1024:
             return f"{bytes_per_second:.0f} B/s"
 
         if bytes_per_second < 1024 ** 2:

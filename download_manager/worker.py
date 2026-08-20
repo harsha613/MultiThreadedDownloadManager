@@ -33,8 +33,9 @@ def download_chunk(
             return  # Exit if the stop event is set
 
         try:
-            if Path(output_path).exists():
-                existing_size = Path(output_path).stat().st_size
+            output_file = Path(output_path)
+            if output_file.exists():
+                existing_size = output_file.stat().st_size
 
                 if existing_size > expected_size:
                     raise ValueError(
@@ -46,11 +47,6 @@ def download_chunk(
                     return
             else:
                 existing_size = 0
-
-            if existing_size > expected_size:
-                raise requests.RequestException(
-                    f"Existing chunk size {existing_size} exceeds expected size {expected_size}"
-                )
 
             resume_from = chunk.start + existing_size
             headers = {
@@ -71,7 +67,7 @@ def download_chunk(
                 )
 
             downloaded_size = 0
-            with open(output_path, "ab") as file:
+            with output_file.open("ab") as file:
                 for data in response.iter_content(chunk_size=8192):
                     if stop_event and stop_event.is_set():
                         return  # Exit if the stop event is set

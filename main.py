@@ -38,5 +38,6 @@ def main() -> None:
     downloader = Downloader(url, output_path, num_threads)
     downloader.download()
 
+
 if __name__ == "__main__":
     main()

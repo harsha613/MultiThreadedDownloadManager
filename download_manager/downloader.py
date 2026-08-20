@@ -11,8 +11,6 @@ from download_manager.merger import merge_chunks
 
 class Downloader:
 
-    CHUNK_SIZE = 8192
-
     def __init__(
         self,
         url: str,
@@ -82,13 +80,13 @@ class Downloader:
                         f.cancel()  # Cancel all other futures if one fails
 
                     for chunk_path in chunk_paths:
-                        if Path(chunk_path).exists():
-                            Path(chunk_path).unlink()  # Clean up any partially downloaded chunks
+                        if chunk_path.exists():
+                            chunk_path.unlink()  # Clean up any partially downloaded chunks
                     return  # Exit if any chunk fails to download
 
         tracker.finish()
 
-        merge_chunks(chunk_paths, self.output_path,)
+        merge_chunks(chunk_paths, self.output_path)
         print(f"Download completed and merged into {self.output_path}")
 
     def download_single(self) -> None:
